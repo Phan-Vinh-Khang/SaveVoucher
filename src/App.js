@@ -113,22 +113,34 @@ function getApiMessage(payload) {
   if (!payload) return null;
   if (typeof payload === 'string') return payload;
 
-  const errorCode = payload?.error ?? payload?.data?.error;
-  const errorMessage = payload?.error_msg ?? payload?.data?.error_msg;
+  const errorCode = payload?.error ?? payload?.data?.error ?? payload?.data?.data?.error;
+  const errorMessageCandidates = [
+    payload?.error_msg,
+    payload?.data?.error_msg,
+    payload?.data?.data?.error_msg,
+  ];
+
+  if (errorMessageCandidates.some((value) => value === '')) {
+    return 'Save voucher th�nh c�ng';
+  }
+
+  const errorMessage = errorMessageCandidates.find(
+    (value) => typeof value === 'string' && value.trim() !== ''
+  );
+
   if (errorCode === 19 || errorMessage === 'Failed to authenticate') {
-    return 'Cookie không hợp lệ';
+    return 'Cookie khong hop le';
   }
 
   return (
     errorMessage ||
     payload?.message ||
-    payload?.error ||
     payload?.data?.message ||
-    payload?.data?.error ||
+    payload?.data?.data?.message ||
+    (payload?.success === true ? 'Save voucher th�nh c�ng' : null) ||
     null
   );
 }
-
 function normalizeCookie(input) {
   const value = String(input ?? '').trim();
   if (!value) return '';
@@ -329,3 +341,4 @@ function App() {
 }
 
 export default App;
+
