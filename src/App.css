@@ -19,11 +19,88 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
 }
 
+/* Input */
+.input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  width: 90%;
+  max-width: 520px;
+  box-sizing: border-box;
+  transition: box-shadow 150ms ease, border-color 150ms ease, background-color 120ms ease;
+}
+.input:focus { outline: none; border-color: rgba(96,165,250,0.9); box-shadow: 0 6px 18px rgba(96,165,250,0.12); }
+
+/* Button refinements */
+.btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: transform 140ms ease, box-shadow 160ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+.btn-primary {
+  padding: 0.65rem 1.1rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: rgba(147, 197, 253, 0.35);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.32);
+}
+.btn-outline {
+  padding: 0.65rem 1.1rem;
+  color: #dbeafe;
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+.btn-outline:hover {
+  background: rgba(51, 65, 85, 0.65);
+  border-color: rgba(147, 197, 253, 0.55);
+}
+.btn:active {
+  transform: translateY(0);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Sizes */
+.btn-sm { padding: 0.28rem 0.6rem; font-size: 0.85rem; }
+.btn-lg { padding: 0.85rem 1.25rem; font-size: 1.05rem; }
+
+/* Status messages */
+.status {
+  margin-top: 16px;
+  width: 100%;
+  max-width: 720px;
+  text-align: left;
+}
+.status-item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.95);
+  font-size: 0.95rem;
+}
+.status-item.success { border-left: 4px solid #10b981; }
+.status-item.error { border-left: 4px solid #ef4444; }
+.status-meta { color: rgba(255,255,255,0.65); font-size: 0.82rem; }
 .App-link {
   color: #61dafb;
 }
