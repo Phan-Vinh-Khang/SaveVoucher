@@ -286,7 +286,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1 className="heading">Voucher Shopee</h1>
-        <p className="text-muted small">Nhập cookie dạng "SPC_ST=[value] hoặc [value]</p>
+        <p className="text-muted small">Nhập cookie dạng SPC_ST=[value] hoặc [value]</p>
 
         <input
           className="input small"
