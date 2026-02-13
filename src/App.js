@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
-const VOUCHER_CONFIGS_ENDPOINT = 'https://otistx.com/api/x7k9m2p4/voucher-configs';
-const VOUCHER_ENDPOINT = 'https://api.autopee.com/shopee/save-voucher';
+const VOUCHER_CONFIGS_ENDPOINT = '/api/voucher-configs';
+const VOUCHER_ENDPOINT = '/api/save-voucher';
 const MAX_STATUS_ITEMS = 50;
 
 const FS_BUTTONS_STYLE = {
@@ -341,4 +341,3 @@ function App() {
 }
 
 export default App;
-
