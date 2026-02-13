@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
-const VOUCHER_CONFIGS_ENDPOINT = '/api/voucher-configs';
-const VOUCHER_ENDPOINT = '/api/save-voucher';
+const BACKEND_BASE_URL = 'https://server-save-voucher.onrender.com';
+const VOUCHER_CONFIGS_ENDPOINT = `${BACKEND_BASE_URL}/api/voucher-configs`;
+const VOUCHER_ENDPOINT = `${BACKEND_BASE_URL}/api/save-voucher`;
 const MAX_STATUS_ITEMS = 50;
 
 const FS_BUTTONS_STYLE = {
