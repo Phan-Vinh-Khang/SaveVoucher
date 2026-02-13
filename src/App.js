@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
 const BACKEND_BASE_URL = 'https://server-save-voucher.onrender.com';
@@ -122,7 +122,7 @@ function getApiMessage(payload) {
   ];
 
   if (errorMessageCandidates.some((value) => value === '')) {
-    return 'Save voucher th�nh c�ng';
+    return 'Save voucher thành công';
   }
 
   const errorMessage = errorMessageCandidates.find(
@@ -138,7 +138,7 @@ function getApiMessage(payload) {
     payload?.message ||
     payload?.data?.message ||
     payload?.data?.data?.message ||
-    (payload?.success === true ? 'Save voucher th�nh c�ng' : null) ||
+    (payload?.success === true ? 'Save voucher thành công' : null) ||
     null
   );
 }
@@ -326,7 +326,10 @@ function App() {
               {`Voucher Freeship ${index + 1}`}
             </button>
           ))}
-        </div>`r`n        <p className="text-muted small">Mã hỏa tốc nằm trong số các mã freeship trên, nếu tất cả đã hết thì hiện đã hết hỏa tốc</p>`r`n`r`n        <div className="status">
+        </div>
+        <p className="text-muted small">Mã hỏa tốc nằm trong số các mã freeship trên, nếu tất cả đã hết thì hiện đã hết hỏa tốc</p>
+
+        <div className="status">
           {statuses.map((statusItem) => (
             <div key={statusItem.id} className={`status-item ${statusItem.ok ? 'success' : 'error'}`}>
               <div style={STATUS_LABEL_STYLE}>{statusItem.label}</div>
