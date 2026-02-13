@@ -326,10 +326,7 @@ function App() {
               {`Voucher Freeship ${index + 1}`}
             </button>
           ))}
-        </div>
-        <p className="text-muted small">Mã hỏa tốc nằm trong số các mã freeship trên, nếu tất cả đã hết thì hiện đã hết hỏa tốc</p>
-
-        <div className="status">
+        </div>`r`n        <p className="text-muted small">Mã hỏa tốc nằm trong số các mã freeship trên, nếu tất cả đã hết thì hiện đã hết hỏa tốc</p>`r`n`r`n        <div className="status">
           {statuses.map((statusItem) => (
             <div key={statusItem.id} className={`status-item ${statusItem.ok ? 'success' : 'error'}`}>
               <div style={STATUS_LABEL_STYLE}>{statusItem.label}</div>
