@@ -211,8 +211,8 @@ function App() {
   );
   const getFeaturedLabel = useCallback((voucher) => {
     if (voucher.source_key === 'voucher_100k' || voucher.voucher_code === 'CRMNUICLHCMT2') return 'Mã giảm 100k';
-    if (voucher.source_key === 'voucher_30k' || voucher.voucher_code === 'CRMNUICLSOUTHT2') return 'Mã giảm 50 tối đa 100';
-    return 'Mã giảm 35% tối đa 200';
+    if (voucher.source_key === 'voucher_30k' || voucher.voucher_code === 'CRMNUICLSOUTHT2') return 'Mã giảm 50% tối đa 100k';
+    return 'Mã giảm 35% tối đa 200k';
   }, []);
   const featuredOrder = { voucher_100k: 0, voucher_30k: 1, voucher_50_max_200k: 2 };
   const featuredVouchers = voucherList
