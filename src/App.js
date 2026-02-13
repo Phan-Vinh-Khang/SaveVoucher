@@ -122,7 +122,7 @@ function getApiMessage(payload) {
   ];
 
   if (errorMessageCandidates.some((value) => value === '')) {
-    return 'Save voucher thành công';
+    return 'Save voucher th�nh c�ng';
   }
 
   const errorMessage = errorMessageCandidates.find(
@@ -130,7 +130,7 @@ function getApiMessage(payload) {
   );
 
   if (errorCode === 19 || errorMessage === 'Failed to authenticate') {
-    return 'Cookie không hợp lệ';
+    return 'Cookie khong hop le';
   }
 
   return (
@@ -138,7 +138,7 @@ function getApiMessage(payload) {
     payload?.message ||
     payload?.data?.message ||
     payload?.data?.data?.message ||
-    (payload?.success === true ? 'Save voucher thành công' : null) ||
+    (payload?.success === true ? 'Save voucher th�nh c�ng' : null) ||
     null
   );
 }
