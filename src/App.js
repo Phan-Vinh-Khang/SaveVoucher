@@ -130,7 +130,7 @@ function getApiMessage(payload) {
   );
 
   if (errorCode === 19 || errorMessage === 'Failed to authenticate') {
-    return 'Cookie khong hop le';
+    return 'Cookie không hợp lệ';
   }
 
   return (
