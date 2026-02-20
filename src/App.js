@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
-const BACKEND_BASE_URL = 'https://server-save-voucher.onrender.com';
+// const BACKEND_BASE_URL = 'https://server-save-voucher.onrender.com';
+const BACKEND_BASE_URL = 'http://localhost:5000';
 const VOUCHER_CONFIGS_ENDPOINT = `${BACKEND_BASE_URL}/api/voucher-configs`;
+const COOKIE_SESSION_ENDPOINT = `${BACKEND_BASE_URL}/api/session/cookie`;
 const VOUCHER_ENDPOINT = `${BACKEND_BASE_URL}/api/save-voucher`;
 const MAX_STATUS_ITEMS = 50;
 
@@ -38,6 +40,7 @@ function toVoucherItem(raw) {
   const promotionid = raw.promotionid ?? raw.promotionId ?? raw.id;
   const voucher_code = raw.voucher_code ?? raw.voucherCode ?? raw.code;
   const signature = raw.signature;
+  const client_id = raw.client_id ?? raw.clientId;
 
   if (!promotionid || !voucher_code || !signature) return null;
 
@@ -45,6 +48,7 @@ function toVoucherItem(raw) {
     promotionid: String(promotionid),
     voucher_code: String(voucher_code),
     signature: String(signature),
+    client_id: client_id ? String(client_id) : '',
   };
 }
 
@@ -57,14 +61,22 @@ function normalizeVoucherConfigs(input) {
     if (key === 'freeship_vouchers' && Array.isArray(value)) {
       for (const item of value) {
         const normalized = toVoucherItem({
-          promotionid: item?.voucherIdString,
-          voucher_code: item?.voucherCode,
-          signature: item?.userSignature,
+          promotionid: item?.voucherIdString ?? item?.promotionId ?? item?.promotionid,
+          voucher_code: item?.voucherCode ?? item?.voucher_code,
+          signature: item?.userSignature ?? item?.signature,
+          client_id:
+            item?.client_id ||
+            item?.clientId ||
+            `freeship:${String(item?.voucherIdString ?? item?.promotionId ?? item?.promotionid ?? '')}`,
         });
         if (normalized) {
           vouchers.push({
             ...normalized,
-            display_name: item?.benefitName || item?.voucherCode || normalized.voucher_code,
+            display_name:
+              item?.benefitName ||
+              item?.voucherName ||
+              item?.voucherCode ||
+              normalized.voucher_code,
           });
         }
       }
@@ -72,7 +84,7 @@ function normalizeVoucherConfigs(input) {
     }
 
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const normalized = toVoucherItem(value);
+      const normalized = toVoucherItem({ ...value, client_id: value?.client_id ?? value?.clientId ?? key });
       if (normalized) {
         vouchers.push({
           ...normalized,
@@ -86,13 +98,27 @@ function normalizeVoucherConfigs(input) {
   return vouchers;
 }
 
-async function doFetch(url, body, signal) {
+async function doFetch(url, body, signal, withCredentials = false) {
   try {
-    const res = await fetch(url, {
+    const options = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      headers: {
+        Accept: 'application/json,text/plain,*/*',
+      },
       signal,
+    };
+
+    if (withCredentials) {
+      options.credentials = 'include';
+    }
+
+    if (body !== undefined) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(url, {
+      ...options,
     });
 
     const text = await res.text();
@@ -149,19 +175,15 @@ function normalizeCookie(input) {
   return `SPC_ST=${value}`;
 }
 
-async function saveSingleVoucherFS(cookie, voucher, signal) {
-  const res = await doFetch(
-    VOUCHER_ENDPOINT,
-    {
-      cookie,
-      signature: voucher.signature,
-      voucher_code: voucher.voucher_code.trim(),
-      voucher_promotionid: voucher.promotionid,
-    },
-    signal
-  );
+async function saveSingleVoucherFS(voucher, signal) {
+  const voucherClientId = String(voucher?.client_id || '').trim();
+  const res = await doFetch(`${VOUCHER_ENDPOINT}/${encodeURIComponent(voucherClientId)}`, undefined, signal, true);
 
   return { item: voucher.display_name || voucher.voucher_code, ...res };
+}
+
+async function syncCookieSession(cookie, signal) {
+  return doFetch(COOKIE_SESSION_ENDPOINT, { cookie }, signal, true);
 }
 
 function App() {
@@ -172,6 +194,7 @@ function App() {
   const [configsError, setConfigsError] = useState('');
   const [statuses, setStatuses] = useState([]);
   const abortRef = useRef(null);
+  const syncedCookieRef = useRef('');
   const mountedRef = useRef(true);
   const statusIdRef = useRef(0);
 
@@ -255,11 +278,12 @@ function App() {
     };
   }, []);
 
-  const handleClickFSItem = useCallback(async (voucher, index) => {
+  const handleClickFSItem = useCallback(async (voucher) => {
     if (loading) return;
 
     const preparedCookie = normalizeCookie(cookie);
     if (!preparedCookie) return;
+    if (!voucher?.client_id) return;
 
     clearStatuses();
     setLoading(true);
@@ -267,7 +291,25 @@ function App() {
     abortRef.current = controller;
 
     try {
-      const res = await saveSingleVoucherFS(preparedCookie, voucher, controller.signal);
+      if (syncedCookieRef.current !== preparedCookie) {
+        const syncRes = await syncCookieSession(preparedCookie, controller.signal);
+
+        if (!syncRes.ok) {
+          appendStatuses([
+            {
+              label: 'Cookie Session',
+              ok: false,
+              status: syncRes.status ?? null,
+              data: syncRes.data ?? syncRes.error ?? 'Khong luu duoc cookie session.',
+            },
+          ]);
+          return;
+        }
+
+        syncedCookieRef.current = preparedCookie;
+      }
+
+      const res = await saveSingleVoucherFS(voucher, controller.signal);
       appendStatuses([
         {
           label: `${res.item ?? ''}`,
@@ -308,7 +350,7 @@ function App() {
             <button
               key={`${voucher.promotionid}-featured`}
               className="btn btn-primary btn-lg"
-              onClick={() => handleClickFSItem(voucher, index)}
+              onClick={() => handleClickFSItem(voucher)}
               disabled={loading}
             >
               {getFeaturedLabel(voucher)}
@@ -320,7 +362,7 @@ function App() {
             <button
               key={`${voucher.promotionid}-${index}`}
               className="btn btn-outline btn-sm"
-              onClick={() => handleClickFSItem(voucher, index)}
+              onClick={() => handleClickFSItem(voucher)}
               disabled={loading}
             >
               {`Voucher Freeship ${index + 1}`}
