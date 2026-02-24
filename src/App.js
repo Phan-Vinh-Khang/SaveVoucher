@@ -58,14 +58,18 @@ function normalizeVoucherConfigs(input) {
     if (key === 'freeship_vouchers' && Array.isArray(value)) {
       for (const item of value) {
         const normalized = toVoucherItem({
-          promotionid: item?.voucherIdString,
-          voucher_code: item?.voucherCode,
-          signature: item?.userSignature,
+          promotionid: item?.voucherIdString ?? item?.promotionId ?? item?.promotionid,
+          voucher_code: item?.voucherCode ?? item?.voucher_code,
+          signature: item?.userSignature ?? item?.signature,
         });
         if (normalized) {
           vouchers.push({
             ...normalized,
-            display_name: item?.benefitName || item?.voucherCode || normalized.voucher_code,
+            display_name:
+              item?.benefitName ||
+              item?.voucherName ||
+              item?.voucherCode ||
+              normalized.voucher_code,
           });
         }
       }
@@ -324,12 +328,10 @@ function App() {
               onClick={() => handleClickFSItem(voucher, index)}
               disabled={loading}
             >
-              {`Voucher Freeship ${index + 1}`}
+              {`Voucher Freeship Hỏa Tốc ${index + 1}`}
             </button>
           ))}
         </div>
-        <p className="text-muted small">Mã hỏa tốc nằm trong số các mã freeship trên, nếu tất cả đã hết thì hiện đã hết hỏa tốc</p>
-
         <div className="status">
           {statuses.map((statusItem) => (
             <div key={statusItem.id} className={`status-item ${statusItem.ok ? 'success' : 'error'}`}>
