@@ -13,6 +13,7 @@ import './App.css';
 
 const ORDERS_API_URL = 'https://minhquy.click/api/orders';
 const DEFAULT_DELAY_SECONDS = 0;
+const AUTO_UPDATE_INTERVAL_MS = 5000;
 const IMAGE_PREVIEW_SIZE = 260;
 const IMAGE_PREVIEW_GAP = 14;
 const SHIPPER_PHONE_CURRENT_KEY = '__shipper_phone_current';
@@ -249,6 +250,7 @@ function App() {
   const [loadingAll, setLoadingAll] = useState(false);
   const [processNote, setProcessNote] = useState('');
   const [delaySeconds, setDelaySeconds] = useState(String(DEFAULT_DELAY_SECONDS));
+  const [autoUpdatingRows, setAutoUpdatingRows] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [expandedSpcStRows, setExpandedSpcStRows] = useState({});
 
@@ -257,10 +259,54 @@ function App() {
   const rowsRef = useRef(rows);
   const cancelAllRef = useRef(false);
   const activeAbortRef = useRef(null);
+  const autoUpdateTimeoutsRef = useRef(new Map());
+  const autoUpdatingRowsRef = useRef(autoUpdatingRows);
+  const loadingAllRef = useRef(loadingAll);
 
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
+
+  useEffect(() => {
+    autoUpdatingRowsRef.current = autoUpdatingRows;
+  }, [autoUpdatingRows]);
+
+  useEffect(() => {
+    loadingAllRef.current = loadingAll;
+  }, [loadingAll]);
+
+  const clearAutoUpdateTimeout = useCallback((rowId) => {
+    const timeoutId = autoUpdateTimeoutsRef.current.get(rowId);
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      autoUpdateTimeoutsRef.current.delete(rowId);
+    }
+  }, []);
+
+  const stopAutoUpdateForRow = useCallback(
+    (rowId) => {
+      clearAutoUpdateTimeout(rowId);
+      setAutoUpdatingRows((prev) => {
+        if (!prev[rowId]) return prev;
+        const next = { ...prev };
+        delete next[rowId];
+        return next;
+      });
+    },
+    [clearAutoUpdateTimeout]
+  );
+
+  const clearAllAutoUpdateTimers = useCallback(() => {
+    autoUpdateTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    autoUpdateTimeoutsRef.current.clear();
+  }, []);
+
+  const stopAllAutoUpdates = useCallback(() => {
+    clearAllAutoUpdateTimers();
+    setAutoUpdatingRows({});
+  }, [clearAllAutoUpdateTimers]);
 
   useEffect(
     () => () => {
@@ -268,8 +314,9 @@ function App() {
       if (activeAbortRef.current) {
         activeAbortRef.current.abort();
       }
+      clearAllAutoUpdateTimers();
     },
-    []
+    [clearAllAutoUpdateTimers]
   );
 
   const handleFileChange = useCallback(async (event) => {
@@ -284,6 +331,7 @@ function App() {
       activeAbortRef.current.abort();
       activeAbortRef.current = null;
     }
+    stopAllAutoUpdates();
     setLoadingAll(false);
 
     try {
@@ -356,7 +404,7 @@ function App() {
     } finally {
       event.target.value = '';
     }
-  }, []);
+  }, [stopAllAutoUpdates]);
 
   const updateRowOrders = useCallback(async (rowId, cookie, options = {}) => {
     const { signal } = options;
@@ -430,6 +478,56 @@ function App() {
     }
   }, []);
 
+  const scheduleAutoUpdateForRow = useCallback(
+    (rowId, cookie) => {
+      clearAutoUpdateTimeout(rowId);
+
+      const timeoutId = window.setTimeout(async () => {
+        if (!autoUpdatingRowsRef.current[rowId]) return;
+
+        if (loadingAllRef.current) {
+          scheduleAutoUpdateForRow(rowId, cookie);
+          return;
+        }
+
+        const currentRow = rowsRef.current.find((row) => row.id === rowId);
+        if (!currentRow) {
+          stopAutoUpdateForRow(rowId);
+          return;
+        }
+
+        if (currentRow.loading) {
+          scheduleAutoUpdateForRow(rowId, currentRow.cookie || cookie);
+          return;
+        }
+
+        await updateRowOrders(rowId, currentRow.cookie || cookie);
+
+        if (autoUpdatingRowsRef.current[rowId]) {
+          scheduleAutoUpdateForRow(rowId, currentRow.cookie || cookie);
+        }
+      }, AUTO_UPDATE_INTERVAL_MS);
+
+      autoUpdateTimeoutsRef.current.set(rowId, timeoutId);
+    },
+    [clearAutoUpdateTimeout, stopAutoUpdateForRow, updateRowOrders]
+  );
+
+  const handleToggleAutoUpdateRow = useCallback(
+    (rowId, cookie) => {
+      if (autoUpdatingRowsRef.current[rowId]) {
+        stopAutoUpdateForRow(rowId);
+        return;
+      }
+
+      if (!cookie || loadingAllRef.current) return;
+
+      setAutoUpdatingRows((prev) => ({ ...prev, [rowId]: true }));
+      scheduleAutoUpdateForRow(rowId, cookie);
+    },
+    [scheduleAutoUpdateForRow, stopAutoUpdateForRow]
+  );
+
   const handleUpdateAll = useCallback(async () => {
     if (loadingAll || !rows.length) return;
 
@@ -438,6 +536,7 @@ function App() {
       Number.isFinite(delayValue) && delayValue >= 0 ? delayValue * 1000 : DEFAULT_DELAY_SECONDS * 1000;
 
     cancelAllRef.current = false;
+    stopAllAutoUpdates();
     setLoadingAll(true);
     setProcessNote('Dang cap nhat tat ca...');
 
@@ -472,7 +571,7 @@ function App() {
       setLoadingAll(false);
       cancelAllRef.current = false;
     }
-  }, [delaySeconds, loadingAll, rows, updateRowOrders]);
+  }, [delaySeconds, loadingAll, rows, stopAllAutoUpdates, updateRowOrders]);
 
   const handleCancelUpdateAll = useCallback(() => {
     if (!loadingAll) return;
@@ -541,6 +640,7 @@ function App() {
       if (columnKey === SHIPPER_STATUS_KEY) {
         const statusMeta = getShipperStatusMeta(row.shipperStatus, row.loading, Boolean(row.error));
         const StatusIcon = statusMeta.icon;
+        const isAutoUpdating = Boolean(autoUpdatingRows[row.id]);
         return (
           <div className="row-actions">
             <div className={`shipper-status-chip ${statusMeta.tone}`}>
@@ -555,6 +655,15 @@ function App() {
             >
               {row.loading ? 'Dang tai...' : 'Cap nhat'}
             </button>
+            <button
+              className={`action-btn ${isAutoUpdating ? 'danger' : 'secondary'}`}
+              type="button"
+              disabled={!isAutoUpdating && (loadingAll || row.loading)}
+              onClick={() => handleToggleAutoUpdateRow(row.id, row.cookie)}
+            >
+              {isAutoUpdating ? 'Dung tu dong' : 'Tu dong 5s'}
+            </button>
+            {isAutoUpdating ? <div className="cell-meta">Tu dong cap nhat moi 5s</div> : null}
             {row.error ? <div className="cell-error">{row.error}</div> : null}
             {!row.error && row.updatedAt ? (
               <div className="cell-meta">Da cap nhat: {formatUpdatedTime(row.updatedAt)}</div>
@@ -598,7 +707,17 @@ function App() {
 
       return values.join(' | ');
     },
-    [expandedSpcStRows, hideImagePreview, loadingAll, moveImagePreview, showImagePreview, toggleSpcSt, updateRowOrders]
+    [
+      autoUpdatingRows,
+      expandedSpcStRows,
+      handleToggleAutoUpdateRow,
+      hideImagePreview,
+      loadingAll,
+      moveImagePreview,
+      showImagePreview,
+      toggleSpcSt,
+      updateRowOrders,
+    ]
   );
 
   return (
